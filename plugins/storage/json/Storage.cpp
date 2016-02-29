@@ -152,7 +152,13 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
 		case BACKSPACE:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'b'; break;
 		case FORMFEED:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'f'; break;
 		case RETURN:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'r'; break;
-		default:		stringWithEscseq[index2++] = pointer[index]; break;
+		default:			//PRINTABLE CHARACTERS ONLY PASSED THIS POINT!!!!!
+							if (pointer[index] >= ' ' && pointer[index] <= '~') {
+								stringWithEscseq[index2++] = pointer[index];
+							} else {
+								MSG_DEBUG(msg_module, "Unprintable Character: (%02X)", pointer[index]&0xFF);
+							}
+							break;
 
 		}
 		
