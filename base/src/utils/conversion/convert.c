@@ -100,7 +100,7 @@
 #define ENTERPRISE_BIT 0x8000
 #define TEMPLATE_ROW_SIZE 4
 
-/** JEP Identifier to MSG_* macros */
+/** Identifier to MSG_* macros */
 static char *msg_module = "convert";
 
 /* Static creation of Netflow v5 Template Set */
@@ -338,47 +338,22 @@ uint16_t insert_template_set(char **packet, int flow_sample_count, ssize_t *len)
  */
 int insert_timestamp_template(struct ipfix_set_header *templSet)
 {
-	struct ipfix_set_header *tmp;
-	uint16_t len, num, i, id; //k;
+	struct ipfix_template_record *tmp;
+	uint16_t len, num, i, id;
 
-	tmp = templSet;
 
 	/* Get template set total length without set header length */
-	len = ntohs(tmp->length) - 4;
-	/*  Uncomment if you want to see the incoming template
-	MSG_DEBUG(msg_module, "Processing Template Set minues Header, len=%u", len);
-	while (k<len+4) {
-		if (k+4 <= len+4) {
-			MSG_DEBUG(msg_module, "byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1],
-					((const unsigned char *) templSet)[k+2],
-					((const unsigned char *) templSet)[k+3]);
-		} else if (k+3 <= len+4) {
-			MSG_DEBUG(msg_module, "byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1],
-					((const unsigned char *) templSet)[k+2]);
-		} else if (k+2 <= len+4) {
-			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1]);
-		} else {
-			MSG_DEBUG(msg_module, "byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
-		}
-		k=k+4;
-	}
- 	*/
+	len = ntohs(templSet->length) - sizeof(struct ipfix_template_record);
+
+	/* Skip set header */
+	tmp = (struct ipfix_template_record*) (templSet + 1);
+
 	/* Iterate through all templates */
-	while ((uint8_t *) tmp < (uint8_t *) templSet + len) {
-		//MSG_DEBUG(msg_module, "PRIES: tmp=%u, templSet+len=%u", (uint8_t)tmp, (uint8_t)templSet+len);
-		tmp++;
-
+	while ((uint8_t *) tmp <= (uint8_t *) templSet + len) {
 		/* Get template ID and number of elements */
-		id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
-		num = ntohs(tmp->length);
+		id = ntohs(tmp->template_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
+		num = ntohs(tmp->count);
 
-		//MSG_DEBUG(msg_module, "PRIES: Template ID=%u, Number Elements=%u", id, num);
 		if (id >= templates.max) {
 			templates.max += 20;
 			templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
@@ -408,33 +383,38 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 		templates.templ[len] = 0;
 		templates.templ[pos] = -1;
 
+		/* Skip template record header */
+		tmp = (struct ipfix_template_record*) (((uint8_t *) tmp) + 4);
+
 		/* Iterate through all elements */
 		for (i = 0; i < num; i++) {
-			tmp++;
-                        //MSG_DEBUG(msg_module,"PRIES: tmp incremented, now tmp=%u", (uint8_t)tmp);
+			/* We will misuse ipfix_template_record to get to individual elements
+			   Enterprise numbers are processed as well, hopefully they will not match */
+
 			/* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
-			if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
+			if (ntohs(tmp->template_id) == NETFLOW_V9_END_ELEM) {
 				/* We don't know which one comes first so we need to check it */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
 				}
 
 				/* Change element ID and element length (32b -> 64b) */
-				tmp->flowset_id = htons(FLOW_END);
-				tmp->length = htons(BYTES_8);
+				tmp->template_id = htons(FLOW_END);
+				tmp->count = htons(BYTES_8);
 				templates.templ[len] += BYTES_4;
-			} else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
+			} else if (ntohs(tmp->template_id) == NETFLOW_V9_START_ELEM) {
 				/* Do the same thing for element 22 */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
 				}
 
-				tmp->flowset_id = htons(FLOW_START);
-				tmp->length = htons(BYTES_8);
+				tmp->template_id = htons(FLOW_START);
+				tmp->count = htons(BYTES_8);
 				templates.templ[len] += BYTES_4;
 			} else {
-				templates.templ[len] += ntohs(tmp->length);
+				templates.templ[len] += ntohs(tmp->count);
 			}
+		tmp = (struct ipfix_template_record*) (((uint8_t *) tmp) + 4);
 		}
 	}
 
@@ -449,101 +429,21 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
  */
 int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 {
-	struct ipfix_set_header *tmp;
-	uint16_t len, i, num, id, k, scopeLen, optLen;
+	struct ipfix_options_template_record *tmp;
+	uint16_t len, num, i, id;
 
-	tmp = templSet;
 
 	/* Get template set total length without set header length */
-	len = ntohs(tmp->length) - 4;
+	len = ntohs(templSet->length) - sizeof(struct ipfix_options_template_record);
 
-	//MSG_DEBUG(msg_module, "Processing Options Template Set minus Header, len=%u", len);
-	/* Uncomment this out if you want to see what is being processed
-	while (k<len+4) {
-		if (k+4 <= len+4) {
-			MSG_DEBUG(msg_module, "byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1],
-					((const unsigned char *) templSet)[k+2],
-					((const unsigned char *) templSet)[k+3]);
-		} else if (k+3 <= len+4) {
-			MSG_DEBUG(msg_module, "byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1],
-					((const unsigned char *) templSet)[k+2]);
-		} else if (k+2 <= len+4) {
-			MSG_DEBUG(msg_module, "byte[%u,%u]: %02x%02x", k, k+1,
-					((const unsigned char *) templSet)[k],
-					((const unsigned char *) templSet)[k+1]);
-		} else {
-			MSG_DEBUG(msg_module, "byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
-		}
-		k=k+4;
-	}
-	*/
+	/* Skip set header */
+	tmp = (struct ipfix_options_template_record*) (templSet + 1);
+
 	/* Iterate through all templates */
-	while ((uint8_t *) tmp < (uint8_t *) templSet + len) {
-		//MSG_DEBUG(msg_module, "tmp=%u, OptTemplSet+len=%u", (uint8_t)tmp, (uint8_t)templSet+len);
-		tmp++; 
-		/*
-		 * We are now pointing 4 bytes in, this is an Options template, it has 3 items to get
-		 * Flow set ID
-		 * Options Scope Length in bytes
-		 * Options Length in bytes
-		 * - This deviates from the 2 element ipfix_set_header type
-		 * - so we are going to hack out a solution here.
-		 * - the number of "pairs" of "ipfix_set_header" is (scope_length + options_length) divided by 4
-		 */
-
-
-		/* Get template ID and number of elements
-		 * here is the hack, we are going to recast the current location of tmp as
-		 * a ipfix_options_template_record and get what we need. */
-		struct ipfix_options_template_record *tmp2;
-		tmp2 = tmp;
-		id = ntohs(tmp2->template_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
-		scopeLen = ntohs(tmp2->count);
-		optLen = ntohs(tmp2->scope_field_count);
-		num = (scopeLen + optLen) / 4;
-
-		/*
-		 * ANOTHER GLARING DIFFERENCE between NFv9 and IPFIX Options templates is that
-		 * v9 maintains scopeLen and optLen in bytes!!!! Wheras IPFIX has them in "count".
-		 * argh.... So we need to conver them.
-		 *
-		 * Field Count
-		 *
-		 * Number of all fields in this Options Template Record, including
-		 * the Scope Fields.
-		 *
-		 * Scope Field Count
-		 *
-		 * Number of scope fields in this Options Template Record.  The Scope
-		 * Fields are normal Fields, except that they are interpreted as
-		 * scope at the Collector.  A scope field count of N specifies that
-		 * the first N Field Specifiers in the Template Record are Scope
-		 * Fields.  The Scope Field Count MUST NOT be zero.
-		 *
-		 * NOTE, I believe this is handled back in the convert method.
-		 */
-
-		//MSG_DEBUG(msg_module, "PRIES: OptTemplate ID=%u, ScopeLength=%u, OptLength=%u, Number Elements=%u", id, scopeLen, optLen, num);
-		//tmp2->count = htons(	 num );
-		//MSG_DEBUG(msg_module, "PRIES: setting IPFIX Field Count to %u, htons:%u", num, htons(num));
-		//tmp2->scope_field_count = htons(optLen/4);
-		//MSG_DEBUG(msg_module, "PRIES: setting IPFIX Scope Field Count to %u, htons:%u", optLen/4, htons(optLen/4));
-
-		/*
-		 * NOW THE HACK, I have to get tmp to point 6 bytes up, not 4.
-		 * how do I do that...
-		 * if i increment tmp2, it contans that data element so we pass where I want to be.
-		 * if i increment tmp, it goes 4 bytes up, I only want it to go 2.
-		 * wonder if i can recast curent location of tmp2 to an uint16_t and increment it, then set tmp to it?
-		 */
-		//uint16_t *tmp3 = tmp2;
-		//tmp3++;
-		//tmp=tmp3;
-		tmp=tmp+2;
+	while ((uint8_t *) tmp <= (uint8_t *) templSet + len) {
+		/* Get template ID and number of elements */
+		id = ntohs(tmp->template_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
+		num = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
 		if (id >= templates.max) {
 			templates.max += 20;
@@ -574,33 +474,38 @@ int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 		templates.templ[len] = 0;
 		templates.templ[pos] = -1;
 
+		/* Skip option template record header */
+		tmp = (struct ipfix_options_template_record*) (((uint8_t *) tmp) + 6);
+
 		/* Iterate through all elements */
 		for (i = 0; i < num; i++) {
-			tmp++;
-                        //MSG_DEBUG(msg_module,"PRIES: tmp incremented, now tmp=%u", (uint8_t)tmp);
+			/* We will misuse ipfix_template_record to get to individual elements
+			   Enterprise numbers are processed as well, hopefully they will not match */
+
 			/* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
-			if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
+			if (ntohs(tmp->template_id) == NETFLOW_V9_END_ELEM) {
 				/* We don't know which one comes first so we need to check it */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
 				}
 
 				/* Change element ID and element length (32b -> 64b) */
-				tmp->flowset_id = htons(FLOW_END);
-				tmp->length = htons(BYTES_8);
+				tmp->template_id = htons(FLOW_END);
+				tmp->count = htons(BYTES_8);
 				templates.templ[len] += BYTES_4;
-			} else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
+			} else if (ntohs(tmp->template_id) == NETFLOW_V9_START_ELEM) {
 				/* Do the same thing for element 22 */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
 				}
 
-				tmp->flowset_id = htons(FLOW_START);
-				tmp->length = htons(BYTES_8);
+				tmp->template_id = htons(FLOW_START);
+				tmp->count = htons(BYTES_8);
 				templates.templ[len] += BYTES_4;
 			} else {
-				templates.templ[len] += ntohs(tmp->length);
+				templates.templ[len] += ntohs(tmp->count);
 			}
+		tmp = (struct ipfix_options_template_record*) (((uint8_t *) tmp) + 4);
 		}
 	}
 
@@ -707,17 +612,15 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 	/* Iterate through all templates */
 	while ((uint8_t *) template_row < (uint8_t *) template_set + set_len) {
 		template_row++;
-		//we are now pointing at Template ID and NumBytes for Scope
-		//we need to account for the 2 byte NumBytes for Options!
 		remaining -= TEMPLATE_ROW_SIZE;
 
-		uint16_t numberOfElements = ntohs(template_row->length);
-		//HAVE TO DO THE TWO STEP HACK
-		uint16_t *tmp3 = template_row;
-		tmp3++;
-		template_row=tmp3;
+		/* Get number of elements */
+		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record*) template_row;
+		uint16_t numberOfElements = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
-		//MSG_DEBUG(msg_module, "ot_unpack template length = %u", numberOfElements);
+//		uint16_t numberOfElements = ntohs(template_row->length);
+		/* Skip extra two bytes in option template record header */
+		template_row = (struct ipfix_set_header*) (((uint8_t *) template_row) + 2);
 
 		/* Iterate through all elements */
 		for (uint16_t i = 0; i < numberOfElements; ++i) {
@@ -725,13 +628,11 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 			remaining -= TEMPLATE_ROW_SIZE;
 
 			uint16_t field_id = ntohs(template_row->flowset_id);
-			//MSG_DEBUG(msg_module,"ot_unpack: checking field_id = %u", field_id);
-
 			/* We are only looking for elements with enterprise bit set to 1 */
 			if (!(field_id & ENTERPRISE_BIT)) {
 				continue;
 			}
-			//MSG_DEBUG(msg_module,"ot_unpack: FOUND AN ENTERPRISE FIELD ID, creating space");
+
 			/* Move to the enterprise number and create space for it */
 			template_row++;
 			memmove(((uint8_t*) template_row) + TEMPLATE_ROW_SIZE, template_row, remaining);
@@ -767,7 +668,6 @@ int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t r
 
 	/* Get template set total length without set header length */
 	uint16_t set_len = ntohs(template_row->length) - sizeof(struct ipfix_set_header);
-        //MSG_DEBUG(msg_module,"PRIES: unpack: Set Length = %u", set_len);
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
@@ -783,13 +683,12 @@ int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t r
 			remaining -= TEMPLATE_ROW_SIZE;
 
 			uint16_t field_id = ntohs(template_row->flowset_id);
-                        //MSG_DEBUG(msg_module,"PRIES: unpack: checking field_id = %u", field_id);
 
 			/* We are only looking for elements with enterprise bit set to 1 */
 			if (!(field_id & ENTERPRISE_BIT)) {
 				continue;
 			}
-                        //MSG_DEBUG(msg_module,"PRIES: unpack: FOUND AN ENTERPRISE FIELD ID, creating space");
+
 			/* Move to the enterprise number and create space for it */
 			template_row++;
 			memmove(((uint8_t*) template_row) + TEMPLATE_ROW_SIZE, template_row, remaining);
@@ -838,8 +737,6 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 			uint64_t sys_uptime = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_4)));
 			uint64_t unix_secs = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8)));
 			uint64_t time_header = (unix_secs * 1000) - sys_uptime;
-                        /* JEP  */
-                        //MSG_DEBUG(msg_module, "PRIES: NETFLOW_V9 Conversion: sysUpTime=%lld, unixSecs=%lld, timeHeader=%lld", sys_uptime, unix_secs, time_header);
 
 			/* Remove sysUpTime field */
 			memmove(*packet + BYTES_4, *packet + BYTES_8, buff_len - BYTES_8);
@@ -881,7 +778,6 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 								return CONVERSION_ERROR;
 							}
 
-
 							/* Check for enterprise elements */
 							*len += unpack_ot_enterprise_elements(set_header, *len - ntohs(header->length));
 						}
@@ -904,17 +800,16 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 							rec_len = option_scope_len + option_len + sizeof(struct ipfix_options_template_record) - sizeof(template_ie);
 
 							uint8_t field_offset = 0, field_index = 0, scope_field_count = 0;
-							MSG_DEBUG(msg_module,"PRIES: field_offset=%u, option_scope_len=%u, option_len=%u", field_offset, option_scope_len, option_len);
 							while (field_offset < option_scope_len + option_len) {
 								/* Option scope fields always come before regular fields */
 								if (field_offset < option_scope_len) {
 									++scope_field_count;
 								}
-                                                                
+
 								/* Enterprise number comes just after the IE, before the next IE */
 								if (ntohs(rec->fields[field_index].ie.id) & 0x8000) {
-							        		field_offset += sizeof(template_ie);
-							                        ++field_index;
+									field_offset += sizeof(template_ie);
+									++field_index;
 								}
 
 								/* Set offset to next field */
@@ -923,7 +818,6 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 							}
 
 							/* Perform conversion from NetFlow v9 to IPFIX */
-							//MSG_DEBUG(msg_module,"Setting field_index=%u, scope_field_count=%u", field_index, scope_field_count);
 							rec->count = htons(field_index);
 							rec->scope_field_count = htons(scope_field_count);
 
@@ -947,7 +841,7 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 							 */
 							uint16_t set_len = ntohs(set_header->length);
 
-							/* Sanity check: does set header length have a realistic value? 
+							/* Sanity check: does set header length have a realistic value?
 							 * We have seen cases where this code was triggered for non-NFv9
 							 * PDUs, resulting in invalid operations.
 							 */
@@ -1075,3 +969,4 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 
 	return 0;
 }
+>>>>>>> 2bcb00a3cca23965bf6f09abda9b746268506b1a
