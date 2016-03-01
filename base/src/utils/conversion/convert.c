@@ -969,4 +969,3 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 
 	return 0;
 }
->>>>>>> 2bcb00a3cca23965bf6f09abda9b746268506b1a
