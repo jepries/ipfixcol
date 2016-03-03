@@ -262,7 +262,7 @@ const char *Translator::escapeString(uint16_t length, const uint8_t *field,
 		 * Control characters (i.e. 0x00 - 0x1F), '"' and  '\' must be escaped
 		 * using "\"", "\\" or "\uXXXX" where "XXXX" is hexa value.
 		 */
-		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\') {
+		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\' && field[i] <= 0x7E) {
 			// Copy to the output buffer
 			buffer[idx_output++] = field[i];
 			continue;
