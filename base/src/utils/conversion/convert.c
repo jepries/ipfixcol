@@ -345,30 +345,29 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 
 	/* Get template set total length without set header length */
 	len = ntohs(tmp->length) - 4;
-        /*
-        MSG_DEBUG(msg_module, "PRIES: Processing Template Set minues Header, len=%u", len);
-        while (k<len) {
-        if (k+4 <= len+4) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1],
-                                  ((const unsigned char *) templSet)[k+2],
-                                  ((const unsigned char *) templSet)[k+3]);
-        } else if (k+3 <= len) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1],
-                                  ((const unsigned char *) templSet)[k+2]);
-        } else if (k+2 <= len) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1]);
-        } else {
-          MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
-        }
-        k=k+4;
-        }
-        */
+	MSG_DEBUG(msg_module, "PRIES: NFv9 Template Set PRIOR to IPFIX Conversion, len=%u", len);
+        uint16_t k = 0;
+	while ( k < len+4 ) {
+		if ( k+4 <= len+4 ) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1],
+				((const unsigned char *) templSet)[k+2],
+				((const unsigned char *) templSet)[k+3]);
+		} else if ( k+3 <= len+4 ) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1],
+				((const unsigned char *) templSet)[k+2]);
+		} else if ( k+2 <= len+4 ) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1]);
+		} else {
+			MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
+		}
+		k=k+4;
+	}
 	/* Iterate through all templates */
 	while ((uint8_t *) tmp < (uint8_t *) templSet + len) {
           //MSG_DEBUG(msg_module, "PRIES: tmp=%u, templSet+len=%u", (uint8_t)tmp, (uint8_t)templSet+len);
@@ -381,6 +380,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
                 /* JEP */
                 //MSG_DEBUG(msg_module, "PRIES: Template ID=%u, Number Elements=%u", id, num);
 		if (id >= templates.max) {
+                	MSG_DEBUG(msg_module, "PRIES: Template ID=%u, Number Elements=%u, Allocating more template space", id, num);
 			templates.max += 20;
 			templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
 
@@ -414,9 +414,10 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 		/* Iterate through all elements */
 		for (i = 0; i < num; i++) {
 			tmp++;
-                        //MSG_DEBUG(msg_module,"PRIES: tmp incremented, now tmp=%u", (uint8_t)tmp);
+			//MSG_DEBUG(msg_module,"PRIES: tmp incremented, now tmp=%u", (uint8_t)tmp);
 			/* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
 			if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
+				MSG_DEBUG(msg_module,"PRIES: Found END Element %u, Adusting length", ntohs(tmp->flowset_id));
 				/* We don't know which one comes first so we need to check it */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
@@ -427,6 +428,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 				tmp->length = htons(BYTES_8);
 				templates.templ[len] += BYTES_4;
 			} else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
+				MSG_DEBUG(msg_module,"PRIES: Found START Element %u, Adusting length", ntohs(tmp->flowset_id));
 				/* Do the same thing for element 22 */
 				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
@@ -454,35 +456,36 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 {
 	struct ipfix_set_header *tmp;
-	uint16_t len, i, num, id, k, scopeLen, optLen;
+	uint16_t len, i, num, id, scopeLen, optLen;
 
 	tmp = templSet;
 
 	/* Get template set total length without set header length */
 	len = ntohs(tmp->length) - 4;
 
-        //MSG_DEBUG(msg_module, "PRIES: Processing Options Template Set minus Header, len=%u", len);
-        while (k<len+4) {
-        if (k+4 <= len+4) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1],
-                                  ((const unsigned char *) templSet)[k+2],
-                                  ((const unsigned char *) templSet)[k+3]);
-        } else if (k+3 <= len+4) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1],
-                                  ((const unsigned char *) templSet)[k+2]);
-        } else if (k+2 <= len+4) {
-          MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
-                                  ((const unsigned char *) templSet)[k],
-                                  ((const unsigned char *) templSet)[k+1]);
-        } else {
-          MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
-        }
-        k=k+4;
-        }
+        MSG_DEBUG(msg_module, "PRIES: NFv9 Options Template PRIOR to IPFIX Conversion, len=%u", len);
+        uint16_t k = 0;
+	while ( k < len+4 ) {
+		if (k+4 <= len+4) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1],
+				((const unsigned char *) templSet)[k+2],
+				((const unsigned char *) templSet)[k+3]);
+		} else if (k+3 <= len+4) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1],
+				((const unsigned char *) templSet)[k+2]);
+		} else if (k+2 <= len+4) {
+			MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+				((const unsigned char *) templSet)[k],
+				((const unsigned char *) templSet)[k+1]);
+		} else {
+			MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) templSet)[k]);
+		}
+		k=k+4;
+	}
 	/* Iterate through all templates */
 	while ((uint8_t *) tmp < (uint8_t *) templSet + len) {
           MSG_DEBUG(msg_module, "PRIES: tmp=%u, OptTemplSet+len=%u", (uint8_t)tmp, (uint8_t)templSet+len);
@@ -631,21 +634,50 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	/* Get used template ID and data set length */
 	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
 	len = ntohs(tmp->length) - 4;
+         
+        /* PRIES: Print out the incoming packet before it is converted */
+        uint16_t k = 0;
+        MSG_DEBUG(msg_module, "PRIES: Incoming NFv9 Data Set Packet before Conversion, len=%u, id=%u", len, id);
+        while ( k < len+4) {
+        	if (k+4 <= len+4) {
+	      		MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+                                  ((const unsigned char *) dataSet)[k],
+                                  ((const unsigned char *) dataSet)[k+1],
+                                  ((const unsigned char *) dataSet)[k+2],
+                                  ((const unsigned char *) dataSet)[k+3]);
+        	} else if (k+3 <= len+4) {
+          		MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+                                  ((const unsigned char *) dataSet)[k],
+                                  ((const unsigned char *) dataSet)[k+1],
+                                  ((const unsigned char *) dataSet)[k+2]);
+        	} else if (k+2 <= len+4) {
+          		MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+                                  ((const unsigned char *) dataSet)[k],
+                                  ((const unsigned char *) dataSet)[k+1]);
+        	} else {
+          		MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) dataSet)[k]);
+        	}
+        	k=k+4;
+        }
 
 	uint32_t lenIndex = templates.cols * id;
 	uint32_t posIndex = lenIndex + 1;
 
 	/* Input check: avoid overflow due to malicious flowset IDs */
 	if (lenIndex > templates.max * templates.cols) {
+		MSG_DEBUG(msg_module, "PRIES: Avoiding overflow due to malicious flowset id: lenIndex=%u, templates.max=%u, templates.cols=%u", lenIndex, templates.max, templates.cols);
 		return 0;
 	}
 
 	/* Get number of data records using the same template */
 	if (templates.templ[lenIndex] <= 0) {
+		MSG_DEBUG(msg_module, "PRIES: No records using this template, templates.templ[%u]=%u",lenIndex,templates.templ[lenIndex] );
 		return 0;
 	}
 	num = len / templates.templ[lenIndex];
+        MSG_DEBUG(msg_module,"PRIES: Number of datasets num=%u, len=%u, templates.templ[%u]=%u", num, len, templates.templ[lenIndex]);
 	if (num == 0) {
+		MSG_DEBUG(msg_module, "PRIES: skipping timestamp insert, len=%u, num=%u", len, len/templates.templ[lenIndex] );
 		return 0;
 	}
 
@@ -656,6 +688,14 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	shifted = 0;
 	first_offset = templates.templ[posIndex];
 	last_offset = first_offset + BYTES_4;
+
+        MSG_DEBUG(msg_module, "PRIES: timestamp_data - id=%u, lenIndex=%u, posIndex=%u, first_offset=%u, last_offset=%u, num=%u", id, lenIndex, posIndex, first_offset, last_offset, num);
+	//TODO: SKIP THIS FOR LOOP IF first_offset < 0 (it is -1!!!!!! which in unsigned is 65535
+        if (((int16_t) first_offset) < 0) 
+	{
+		MSG_DEBUG(msg_module, "PRIES: Skipping timestamp insert, no fields found to change, first_offset=%u", first_offset);
+                return 0;
+        }
 
 	for (i = num - 1; i >= 0; i--) {
 		/* Resize each timestamp in each data record to 64 bit */
@@ -834,15 +874,46 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 	uint16_t flow_sample_count = 0;
 	uint16_t offset = 0;
 	info_list = (struct input_info_list *) input_info;
+	
+	/* ADDED BY JEPRIES for Conversion Printing */
+	uint16_t k, myLen;
 
 	switch (htons(header->version)) {
 		/* Netflow v9 packet */
 		case NETFLOW_V9_VERSION: {
+			/* PRIES: Print out the  template after it is converted */
+       			k = 0;
+			MSG_DEBUG(msg_module, "PRIES: NFv9 Header...");
+			myLen = 20; //Header is 2 bytes version, 2 bytes count, 4 bytes sysUpTime, 4 bytes Ipeoc, 4 bytes Sequence, 4 bytes Source ID
+       			while (k < myLen) {
+       				if (k+4 <= myLen) {
+       					MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+       						((const unsigned char *) header)[k],
+       						((const unsigned char *) header)[k+1],
+                       		 		((const unsigned char *) header)[k+2],
+                       	        		((const unsigned char *) header)[k+3]);
+        			} else if (k+3 <= myLen) {
+          				MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+                       				((const unsigned char *) header)[k],
+                       				((const unsigned char *) header)[k+1],
+                       				((const unsigned char *) header)[k+2]);
+        			} else if (k+2 <= myLen) {
+          				MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+                       				((const unsigned char *) header)[k],
+                       				((const unsigned char *) header)[k+1]);
+        			} else {
+          				MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) header)[k]);
+        			}
+        			k=k+4;
+        		}
+			uint16_t count = ntohs(*((uint16_t *) (((uint8_t *) header) + BYTES_2)));
 			uint64_t sys_uptime = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_4)));
 			uint64_t unix_secs = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8)));
+			uint64_t pkg_sequence = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_4)));
+			uint64_t sourceId = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_8 )));
 			uint64_t time_header = (unix_secs * 1000) - sys_uptime;
-                        /* JEP  */
-                        //MSG_DEBUG(msg_module, "PRIES: NETFLOW_V9 Conversion: sysUpTime=%lld, unixSecs=%lld, timeHeader=%lld", sys_uptime, unix_secs, time_header);
+			/* JEP  */
+			MSG_DEBUG(msg_module, "PRIES: NETFLOW_V9 Conversion: version=%lld, count=%lld, sysUpTime=%lld, unixSecs=%lld, pkgSequence=%lld, sourceId=%lld, timeHeader=%lld", htons(header->version), count, sys_uptime, unix_secs, pkg_sequence, sourceId, time_header);
 
 			/* Remove sysUpTime field */
 			memmove(*packet + BYTES_4, *packet + BYTES_8, buff_len - BYTES_8);
@@ -873,6 +944,31 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 							/* Check for enterprise elements */
 							*len += unpack_enterprise_elements(set_header, *len - ntohs(header->length));
 						}
+        					/* PRIES: Print out the  template after it is converted */
+        					k = 0;
+						MSG_DEBUG(msg_module, "PRIES: Template Conversion to IPFIX Complete.");
+						myLen = ntohs(set_header->length);  
+        					while (k < myLen) {
+        						if (k+4 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1],
+                                  					((const unsigned char *) set_header)[k+2],
+                                  					((const unsigned char *) set_header)[k+3]);
+        						} else if (k+3 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1],
+                                  					((const unsigned char *) set_header)[k+2]);
+        						} else if (k+2 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1]);
+        						} else {
+          							MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) set_header)[k]);
+        						}
+        						k=k+4;
+        					}
 
 						break;
 
@@ -935,6 +1031,31 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 							/* Set offset to next record */
 							otempl_p += rec_len;
 						}
+        					/* PRIES: Print out the options template after it is converted */
+        					k = 0;
+						MSG_DEBUG(msg_module, "PRIES: Options Template Conversion to IPFIX Complete.");
+						myLen = ntohs(set_header->length);  
+        					while (k < myLen) {
+        						if (k+4 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1],
+                                  					((const unsigned char *) set_header)[k+2],
+                                  					((const unsigned char *) set_header)[k+3]);
+        						} else if (k+3 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1],
+                                  					((const unsigned char *) set_header)[k+2]);
+        						} else if (k+2 <= myLen) {
+          							MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+                                  					((const unsigned char *) set_header)[k],
+                                  					((const unsigned char *) set_header)[k+1]);
+        						} else {
+          							MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) set_header)[k]);
+        						}
+        						k=k+4;
+        					}
 
 						break;
 
@@ -946,6 +1067,7 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 						if (ntohs(set_header->length) > 0) {
 							uint16_t shifted = insert_timestamp_data(set_header, time_header, *len - ntohs(header->length));
 							*len += (shifted * 8);
+                                                        MSG_DEBUG(msg_module,"PRIES: Timestamp conversion complete, Length shifted by %u bytes", shifted*8);
 
 							/* Add padding bytes, if necessary. Note that this is not required,
 							 * but recommended.
@@ -970,6 +1092,7 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 								 * lots of reallocs (expensive).
 								 */
 								if (*len + padding_len > max_len) {
+                                                                        MSG_ERROR(msg_module,"PRIES: ERROR at Add Padding, message exceeds maximum memory allocation.");
 									return CONVERSION_ERROR;
 								}
 
@@ -979,6 +1102,34 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
 								*len += padding_len;
 								set_header->length = htons(set_len + padding_len);
 							}
+                                                        MSG_DEBUG(msg_module,"PRIES: Padding addition (if necessary) completed");
+        						/* PRIES: Print out the incoming packet before it is converted */
+        						k = 0;
+							MSG_DEBUG(msg_module, "PRIES: Conversion to IPFIX Complete.");
+                                                        myLen = ntohs(set_header->length);  
+        						while (k < myLen) {
+        							if (k+4 <= myLen) {
+          								MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u,%u]: %02x%02x %02x%02x", k, k+1, k+2, k+3,
+                                  						((const unsigned char *) set_header)[k],
+                                  						((const unsigned char *) set_header)[k+1],
+                                  						((const unsigned char *) set_header)[k+2],
+                                  						((const unsigned char *) set_header)[k+3]);
+        							} else if (k+3 <= myLen) {
+          								MSG_DEBUG(msg_module, "PRIES: byte[%u,%u,%u]: %02x%02x %02x", k, k+1, k+2,
+                                  						((const unsigned char *) set_header)[k],
+                                  						((const unsigned char *) set_header)[k+1],
+                                  						((const unsigned char *) set_header)[k+2]);
+        							} else if (k+2 <= myLen) {
+          								MSG_DEBUG(msg_module, "PRIES: byte[%u,%u]: %02x%02x", k, k+1,
+                                  						((const unsigned char *) set_header)[k],
+                                  						((const unsigned char *) set_header)[k+1]);
+        							} else {
+          								MSG_DEBUG(msg_module, "PRIES: byte:[%u]: %02x ", k, ((const unsigned char *) set_header)[k]);
+        							}
+        							k=k+4;
+        						}
+						} else {
+							MSG_DEBUG(msg_module,"PRIES: Skipping this dataset, Length <= 0");
 						}
 
 						break; }
