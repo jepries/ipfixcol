@@ -628,7 +628,8 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 {
 	struct ipfix_set_header *tmp;
 	uint8_t *pkt;
-	uint16_t id, len, num, shifted, first_offset, last_offset;
+	uint16_t id, len, num, shifted;
+	int32_t first_offset, last_offset;
 	int i;
 
 	tmp = dataSet;
@@ -691,15 +692,10 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	first_offset = templates.templ[posIndex];
 	last_offset = first_offset + BYTES_4;
 
-        //MSG_DEBUG(msg_module, "timestamp_data - id=%u, lenIndex=%u, posIndex=%u, first_offset=%u, last_offset=%u, num=%u", id, lenIndex, posIndex, first_offset, last_offset, num);
-	//SKIP THIS FOR LOOP IF first_offset < 0 (it is -1!!!!!! which in unsigned is 65535
-        if (((int16_t) first_offset) < 0) 
-	{
-#ifdef DEBUG
-		MSG_DEBUG(msg_module, "Skipping timestamp insert, no fields found to change, first_offset=%u", first_offset);
-#endif
-                return 0;
-        }
+	/* If there is nothing to insert, return */
+	if (first_offset == -1) {
+		return 0;
+	}
 
 	for (i = num - 1; i >= 0; i--) {
 		/* Resize each timestamp in each data record to 64 bit */
