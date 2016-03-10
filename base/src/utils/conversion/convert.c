@@ -919,14 +919,14 @@ int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_in
         			k=k+4;
         		}
 			uint16_t count = ntohs(*((uint16_t *) (((uint8_t *) header) + BYTES_2)));
-			uint64_t pkg_sequence = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_4)));
-			uint64_t sourceId = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_8 )));
+			uint32_t pkg_sequence = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_4)));
+			uint32_t sourceId = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8 + BYTES_8 )));
 #endif
 			uint64_t sys_uptime = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_4)));
 			uint64_t unix_secs = ntohl(*((uint32_t *) (((uint8_t *) header) + BYTES_8)));
 			uint64_t time_header = (unix_secs * 1000) - sys_uptime;
 #ifdef DEBUG
-			MSG_DEBUG(msg_module, "PRIES: NETFLOW_V9 Conversion: version=%lld, count=%lld, sysUpTime=%lld, unixSecs=%lld, pkgSequence=%lld, sourceId=%lld, timeHeader=%lld", htons(header->version), count, sys_uptime, unix_secs, pkg_sequence, sourceId, time_header);
+			MSG_DEBUG(msg_module, "PRIES: NETFLOW_V9 Conversion: version=%u, count=%u, sysUpTime=%lu, unixSecs=%lu, pkgSequence=%lu, sourceId=%lu, timeHeader=%lu", htons(header->version), count, (uint32_t) sys_uptime, (uint32_t) unix_secs, (uint32_t) pkg_sequence, (uint32_t) sourceId, time_header);
 #endif
 			/* Remove sysUpTime field */
 			memmove(*packet + BYTES_4, *packet + BYTES_8, buff_len - BYTES_8);
