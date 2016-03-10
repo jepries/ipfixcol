@@ -262,7 +262,7 @@ const char *Translator::escapeString(uint16_t length, const uint8_t *field,
 		 * Control characters (i.e. 0x00 - 0x1F), '"' and  '\' must be escaped
 		 * using "\"", "\\" or "\uXXXX" where "XXXX" is hexa value.
 		 */
-		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\') {
+		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\' && field[i] <= 0x7E) {
 			// Copy to the output buffer
 			buffer[idx_output++] = field[i];
 			continue;
@@ -301,12 +301,21 @@ const char *Translator::escapeString(uint16_t length, const uint8_t *field,
 		case '\r': // Return
 			ESCAPE_CHAR('r');
 			break;
+		case '\0': // Null Termination
+			/* 
+			   Vendors will null terminate a string and not clear the rest of the field, I can 
+			   see how that would be more efficient on the sender to write out the data up to the
+			   null termination and then ignore the rest of the field.  I want to ignore the rest
+			   of the field after the null is received
+ 			*/
+			goto null_terminator;
 		default: // "\uXXXX"
 			snprintf(&buffer[idx_output], 7, "\\u00%02x", field[i]);
 			idx_output += 6;
 			break;
 		}
 	}
+        null_terminator:
 	#undef ESCAPE_CHAR
 
 	// End of the string
