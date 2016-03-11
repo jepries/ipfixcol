@@ -23,10 +23,11 @@
 			<localIPAddress></localIPAddress>
 		</udpCollector>
 		<!--## Name of the exporting process. Must match exporting process name -->
-		<!-- exportingProcess>File writer UDP</exportingProcess -->
-		<exportingProcess>JSON writer UDP</exportingProcess>
+		<!-- exportingProcess>File writer UDP Rotate</exportingProcess -->
+		<exportingProcess>File writer UDP Rotate</exportingProcess>
+		<!-- exportingProcess>JSON writer UDP</exportingProcess -->
 		<!--## File for exporting status information to (combined with -S) -->
-		<statisticsFile>/prod/eclapp/log/ipfixcol_stat.log</statisticsFile>
+		<statisticsFile>/home/v795363/log/ipfixcol_stat.log</statisticsFile>
 	</collectingProcess>
 
 	<!-- collectingProcess>
@@ -52,21 +53,37 @@
 	</collectingProcess -->
 
 	<!--## Exporting process configuration -->
-	<!-- <exportingProcess> -->
+	<exportingProcess>
 		<!--## Name of the exporting process, must match <exportingProcess> element
 			   in <collectingProcess> -->
-	<!--	<name>File writer UDP</name>
-                <singleManager>yes</singleManager>  -->
+		<name>File writer UDP</name>
+                <singleManager>yes</singleManager>  
 		<!--## Specification of storage plugin -->
-	<!--	<destination>
+		<destination>
 			<name>all ODIDs</name>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
-				<file>file://prod/test/flow/collected-records-udp-all-odid.ipfix</file>
+				<file>file://home/v795363/flows/collected-records-udp-all-odid.ipfix</file>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
-	-->
+	<exportingProcess>
+		<!--## Name of the exporting process, must match <exportingProcess> element
+			   in <collectingProcess> -->
+		<name>File writer UDP Rotate</name>
+                <singleManager>yes</singleManager>  
+		<!--## Specification of storage plugin -->
+		<destination>
+			<name>all ODIDs</name>
+			<fileWriter>
+				<fileFormat>ripfix</fileFormat>
+				<file>file://home/v795363/flows/collected.ipfix</file>
+                     		<timeWindow>60</timeWindow>
+                     		<timeAlignment>yes</timeAlignment>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+	
 
 	<exportingProcess>
 	  <name>JSON writer UDP</name>
@@ -92,7 +109,7 @@
                  </output -->
                  <output>
                    <type>file</type>
-                   <path>/prod/test/flow/</path>
+                   <path>/home/v795363/flows/</path>
                    <prefix>json.</prefix>
                    <dumpInterval>
                      <timeWindow>300</timeWindow>
