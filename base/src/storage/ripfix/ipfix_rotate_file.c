@@ -79,16 +79,18 @@ static char *msg_module = "ripfix storage";
  *
  * \brief IPFIX storage plugin specific "config" structure
  */
-struct ipfix_config {
+typedef struct ipfix_config {
 	int fd;                     /**< file descriptor of an output file */
 	unsigned int w_size;        /**< Windows size for file times */
 	bool w_align;               /**< Align Window to boundary */
-	uint32_t fcounter;          /**< number of created files */
+	uint64_t fcounter;          /**< number of created files */
 	uint64_t bcounter;          /**< bytes written into a current output
 	                             * file */
 	xmlChar *xml_file;          /**< URI from XML configuration file */
 	char *file;                 /**< actual path where to store messages */
-};
+        int next_fd;                /**< File Descriptor for NEXT File */
+	char *next_file;            /**< next actual path where to store messages */
+} ipfix_config_t;
 
 /** This section copied from plugins/storage/json **/
 /** Minimal window size */
@@ -102,10 +104,11 @@ typedef struct thread_ctx_s {
 
 	unsigned int window_size;    /**< Size of a time window      */
 	time_t window_time;          /**< Current time window        */
-	char *storage_path;          /**< Storage path incl. prefix  */
 
-	int fd;                      /**< New File Descriptor        */
 	bool new_file_ready;         /**< New file flag              */
+	bool writing_inprog;         /**< File is in use             */
+
+	ipfix_config_t *config;      /**< The Parent Threads config  */
 } thread_ctx_t;
 
 /** Thread for changing time windows */
@@ -121,25 +124,22 @@ thread_ctx_t *_thread;
  * \param[in] conf  output plugin config structure
  * \return  0 on success, negative value otherwise.
  */
-static int prepare_output_file(struct ipfix_config *config)
+int prepare_output_file(ipfix_config_t *config)
 {
 	int fd;
 
 	/* file counter */
 	config->fcounter += 1;
-	/* byte counter */
-	config->bcounter = 0;
 
 
-	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
+	fd = open(config->next_file, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		config->fcounter -= 1;
 		MSG_ERROR(msg_module, "Unable to open output file");
 		return -1;
 	}
-
-	config->fd = fd;
+	config->next_fd = fd;
 
 	return 0;
 }
@@ -170,16 +170,19 @@ static int close_output_file(struct ipfix_config *config)
  * \param[in,out] context Thread configuration
  * \return Nothing
  */
-static void thread_window(void *context)
+static void *thread_window(void *context)
 {
         thread_ctx_t *ctx = (thread_ctx_t *) context;
+	ipfix_config_t *cfg = (ipfix_config_t *) ctx->config;
         MSG_DEBUG(msg_module, "Thread started...");
+	time_t t;
+	struct tm tm;
 
         while(!ctx->stop) {
+		struct timespec tim;
+		tim.tv_sec = 0;
+		tim.tv_nsec = 100000000L; // 0.1 sec
                 // Sleep
-                struct timespec tim;
-                tim.tv_sec = 0;
-                tim.tv_nsec = 100000000L; // 0.1 sec
                 nanosleep(&tim, NULL);
 
                 // Get current time
@@ -194,15 +197,57 @@ static void thread_window(void *context)
                 pthread_mutex_lock(&ctx->mutex);
 
                 ctx->window_time += ctx->window_size;
+		MSG_DEBUG(msg_module, "1");
 
-                // Null pointer is also valid...
-                ctx->new_file_ready = true;
-		MSG_DEBUG(msg_module, "TIME TO ROTATE FILES!!!!!!");
+		MSG_DEBUG(msg_module, "Creating new file, bytes written to old: %llu", cfg->bcounter);
+
+		//open the new file and make it ready, then tell the parent with new_file_ready
+		/* add timestamp at the end of the file name */
+		memset(&tm, 0, sizeof(tm));
+		t = time(NULL);
+
+		localtime_r(&t, &tm);
+		/* Copy the base file name into conf->file */
+		/* output file path + timestamp */
+		uint16_t path_len = strlen((char *) cfg->xml_file) + 11;
+		cfg->next_file = (char *) malloc(path_len);
+		if (cfg->next_file == NULL) {
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			continue;
+		}
+		memset(cfg->next_file, 0, path_len);
+
+		/* copy file path, skip "file:" at the beginning of the URI */
+		strncpy_safe(cfg->next_file, (char *) cfg->xml_file+6, path_len);
+		
+		MSG_DEBUG(msg_module, "Storage Path = %s", cfg->next_file);
+		strftime(cfg->next_file+strlen((char *) cfg->next_file), 14, ".%y%m%d%H%M", &tm);
+		/* conf->file now looks like: "/path/to/file.11091315" */
+		MSG_DEBUG(msg_module, "Attempting to create %s", cfg->next_file);
+
+		if( prepare_output_file(cfg) >= 0) {
+			int old_fd = cfg->fd; //store the old fd so we can close it
+			/* At this point, the thread has created a new file and ctx->fd is pointing at it */
+                	ctx->new_file_ready = true;
+			while (ctx->writing_inprog) {
+                		nanosleep(&tim, NULL);
+			}
+			//ok, now the old file
+			int ret;
+			ret = close(old_fd);
+			if (ret == -1) {
+				MSG_ERROR(msg_module, "Error when closing output file");
+			}
+		} else {
+			MSG_WARNING(msg_module, "CANNOT CREATE NEW FILE, maintaining old file");
+		}
+
                 pthread_mutex_unlock(&ctx->mutex);
+
         }
 
         MSG_DEBUG(msg_module, "Thread terminated.");
-        return NULL;
+ 	return 0;
 }
 
 /*
@@ -318,33 +363,31 @@ int storage_init(char *params, void **config)
 
 	/* output file path + timestamp */
 	uint16_t path_len = strlen((char *) conf->xml_file) + 11;
-	conf->file = (char *) malloc(path_len);
-	if (conf->file == NULL) {
+	conf->next_file = (char *) malloc(path_len);
+	if (conf->next_file == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_init;
 	}
-	memset(conf->file, 0, path_len);
+	memset(conf->next_file, 0, path_len);
 
 	/* copy file path, skip "file:" at the beginning of the URI */
-	strncpy_safe(conf->file, (char *) conf->xml_file + 5, path_len);
+	strncpy_safe(conf->next_file, (char *) conf->xml_file + 6, path_len);
 
 
 	/* At this point, we want to configure and start our thread that will rotate filenames */
         //_thread = new thread_ctx_t;
  	/* allocate space for window config structure */
-	_thread = (thread_ctx_t *) malloc(sizeof(*_thread));
-        MSG_DEBUG(msg_module, "1");
+	_thread = (thread_ctx_t *) malloc(sizeof(*_thread) + path_len);
+	memset(_thread, '\0', sizeof(*_thread) + path_len);
 	if (_thread == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	memset(_thread, '\0', sizeof(*_thread));
 	_thread->new_file_ready = false;
 	_thread->stop = false;
-        MSG_DEBUG(msg_module, "2");
+	_thread->config = conf;
 
 	_thread->window_size = w_size;
-        MSG_DEBUG(msg_module, "3");
 	time(&_thread->window_time);
 
 	if (w_align) {
@@ -359,8 +402,7 @@ int storage_init(char *params, void **config)
 					"windows.");
 		return -1;
 	}
-	if (pthread_create(&_thread->thread, NULL, &thread_window,
-				_thread) != 0) {
+	if (pthread_create(&_thread->thread, NULL, &thread_window, _thread) != 0) {
 		pthread_mutex_destroy(&_thread->mutex);
 		free(_thread);
 		MSG_ERROR(msg_module, "Failed to start a thread for changing time "
@@ -374,10 +416,13 @@ int storage_init(char *params, void **config)
 
 	localtime_r(&t, &tm);
 
-	strftime(conf->file+strlen((char *) conf->file), 14, ".%y%m%d%H%M", &tm);
+	strftime(conf->next_file+strlen((char *) conf->next_file), 14, ".%y%m%d%H%M", &tm);
 	/* conf->file now looks like: "/path/to/file.11091315" */
 
 	prepare_output_file(conf);
+	/* _thread now knows the current file descriptor, lets tell the parent */
+	conf->fd = conf->next_fd;
+
 
 	/* we don't need this xml tree anymore */
 	xmlFreeDoc(doc);
@@ -418,9 +463,11 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	//Check to see if we need to rotate files!
 	if (_thread->new_file_ready) {
 		MSG_DEBUG(msg_module, "ROTATING OUTPUT FILE");
+		conf->fd = conf->next_fd;
+		conf->bcounter = 0;
 		_thread->new_file_ready = false;
 	}
-
+	_thread->writing_inprog = true;
 	/* write IPFIX message into an output file */
 	while (wbytes < ntohs(ipfix_msg->pkt_header->length)) {
 		count = write(conf->fd, (ipfix_msg->pkt_header)+wbytes,
@@ -441,6 +488,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	conf->bcounter += wbytes;
+	_thread->writing_inprog = false;
 
 	return 0;
 }
@@ -478,6 +526,12 @@ int storage_close(void **config)
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) *config;
 
+	//Tell the window thread to stop and join it out
+	_thread->stop = true;
+	if (pthread_join(_thread->thread, NULL))
+	{
+		MSG_ERROR(msg_module, "Error joining out Time Window Thread");
+	}
 	close_output_file(conf);
 
 	if (conf->bcounter == 0) {
