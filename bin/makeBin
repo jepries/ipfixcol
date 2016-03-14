@@ -20,4 +20,4 @@ cp ../base/src/input/sctp/.libs/ipfixcol-sctp-input.so .
 cp ../base/src/storage/ipfix/.libs/ipfixcol-ipfix-output.so .
 cp ../base/src/storage/forwarding/.libs/ipfixcol-forwarding-output.so .
 cp ../base/src/utils/libsiso/.libs/libsiso.so .
-
+cp ../plugins/storage/fastbit/.libs/ipfixcol-fastbit-output.so .
