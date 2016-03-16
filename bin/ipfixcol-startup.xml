@@ -26,7 +26,7 @@
 		<!-- exportingProcess>File writer UDP</exportingProcess -->
 		<exportingProcess>JSON writer UDP</exportingProcess>
 		<!--## File for exporting status information to (combined with -S) -->
-		<statisticsFile>/prod/eclapp/log/ipfixcol_stat.log</statisticsFile>
+		<statisticsFile>/home/john/log/ipfixcol_stat.log</statisticsFile>
 	</collectingProcess>
 
 	<!-- collectingProcess>
@@ -52,27 +52,56 @@
 	</collectingProcess -->
 
 	<!--## Exporting process configuration -->
-	<!-- <exportingProcess> -->
-		<!--## Name of the exporting process, must match <exportingProcess> element
-			   in <collectingProcess> -->
-	<!--	<name>File writer UDP</name>
-                <singleManager>yes</singleManager>  -->
-		<!--## Specification of storage plugin -->
-	<!--	<destination>
-			<name>all ODIDs</name>
-			<fileWriter>
-				<fileFormat>ipfix</fileFormat>
-				<file>file://prod/test/flow/collected-records-udp-all-odid.ipfix</file>
-			</fileWriter>
-		</destination>
-	</exportingProcess>
-	-->
+
+        <!-- exportingProcess>
+                <name>File writer UDP</name -->
+                <!-- destination>
+                        <name>Write to /tmp folder</name>
+                        <observationDomainId>0</observationDomainId>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/john/flows/ipfix-udp_domain0.record</file>
+                        </fileWriter>
+                </destination>
+                <destination>
+                        <name>Write to /tmp folder</name>
+                        <observationDomainId>1</observationDomainId>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/john/flows/ipfix-udp_domain1.record</file>
+                        </fileWriter>
+                </destination>
+                <destination>
+                        <name>Write to /tmp folder</name>
+                        <observationDomainId>2</observationDomainId>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/john/flows/ipfix-udp_domain2.record</file>
+                        </fileWriter>
+                </destination>
+                <destination>
+                        <name>Write to /tmp folder</name>
+                        <observationDomainId>3</observationDomainId>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/john/flows/ipfix-udp_domain3.record</file>
+                        </fileWriter>
+                </destination -->
+                <!-- destination>
+                        <name>Write to /tmp folder</name>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/john/flows/ipfix-udp.record</file>
+                        </fileWriter>
+                </destination>
+        </exportingProcess -->
+
 
 	<exportingProcess>
 	  <name>JSON writer UDP</name>
-          <singleManager>yes</singleManager> 
+          <!-- singleManager>yes</singleManager --> 
 	  <destination>
-	      <name>all ODID</name>
+	      <name>JSON storage plugin</name>
 	      <fileWriter>
 	         <fileFormat>json</fileFormat>
 	         <metadata>no</metadata>
@@ -92,7 +121,7 @@
                  </output -->
                  <output>
                    <type>file</type>
-                   <path>/prod/test/flow/</path>
+                   <path>/home/john/flows/</path>
                    <prefix>json.</prefix>
                    <dumpInterval>
                      <timeWindow>300</timeWindow>
@@ -106,7 +135,8 @@
                  </output -->
                </fileWriter>
              </destination>
-        </exportingProcess>	
+	</exportingProcess>
+	
 	<!-- exportingProcess>
 		<name>File writer TCP</name>
 		<destination>
@@ -136,9 +166,8 @@
 	<!-- List of active Intermediate Plugins -->
 	<intermediatePlugins>
 		<!-- Dummy Intermediate Plugin - does nothing -->
-		<!-- dummy_ip>
+		<!--dummy_ip>
 		</dummy_ip -->
-                
                 <odip>
                 </odip>
 		
