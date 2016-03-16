@@ -1,0 +1,32 @@
+Instructions on tcp rewriting your capture files:
+NOTE: You cannot send packets from the same machine to the same machine, you 
+	MUST use a different machine to send packets to your target
+
+1.  Take the capture file and convert it to a convertable format
+	tcprewrite --infile=<pcap> --outfile=<pcap>.1 --dlt=enet
+
+2.  Convert all the Destination IP and MAC addresses to your target
+	tcprewrite --infile=<pcap>.1 --outfile=<pcap>.2 --dstipmap=0.0.0.0/0:x.x.x.x --enet-dmac=yy.yy.yy.yy.yy.yy
+	where x.x.x.x is the IP address of where you want to send your packets
+	yy.yy.yy.yy.yy.yy is the MAC Address of where you want to send your packets
+	Note: use "ipconfig -a" to find both
+
+3.  Probably optional, but you can Convert the SOURCE IP's and MAC with the following.  You 
+	MAY NOT WANT TO DO THIS as it will make ipfixcol think that ALL PACKETS are coming
+	from the same router.  This is a valid thing, a single exporting router can have 
+	multiple entities sending templates and packets....
+	UNLESS you need to get through firewalls or something, you PROBABLY SHOULD NOT DO THIS STEP
+	tcprewrite --infile=<pcap>.2 --outfile=<pcap>.3 srcipmap=0.0.0.0/0:y.y.y.y --enet-smac=zz.zz.zz.zz.zz.zz
+	where y.y.y.y is the IP Address of where you are sending from
+	zz.zz.zz.zz.zz is the MAC Address of where you are sending from
+
+4.  Fix the checksums
+	tcprewrite --infile=<pcap>.3 --outfile=<pcap>.final --fixcsum
+
+5.  SHIP IT!
+	sudo tcpreplay --intf1=<eth> --pps=<#> <pcap>.final
+	where <eth> is the interface you want to ship out your packets on
+	<#> is how fast you want to send the packets, remove this option if you want to 
+		send them at the same speed you received them
+	
+TADA
