@@ -6,4 +6,5 @@ cp ../base/src/intermediate/dummy/.libs/ipfixcol-dummy-inter.so .
 cp ../base/src/ipfixviewer/.libs/ipfixcol-ipfixviewer-output.so .
 cp ../base/src/ipfixcol .
 cp ../base/src/ipfixviewer/ipfixviewer .
+cp ../base/src/input/tcp/.libs/ipfixcol-tcp-input.so .
 #cp ../base/config/ipfixcol ipfixcolctl 

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+	<!--## Every collecting process will be started as new process -->
+	<collectingProcess>
+		<!--## Arbitrary collecting process name  -->
+		<name>UDP collector</name>
+		<!--## Type of the collector. Supported types are defined in internalcfg.xml -->
+		<udpCollector>
+			<!--## Arbitrary udp collector name -->
+			<name>Listening port 51000</name>
+			<!--## Local listening port -->
+			<localPort>51000</localPort>
+			<!--## Template lifetime in seconds -->
+			<templateLifeTime>1800</templateLifeTime>
+			<!--## Options template lifetime in seconds -->
+			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+			<!--## Template lifetime in packets (for how many packets is template valid) -->
+			<!-- <templateLifePacket>5</templateLifePacket>  -->
+			<!--## Options template lifetime in packets -->
+			<!-- <optionsTemplateLifePacket>100</optionsTemplateLifePacket>  -->
+			<!--## Local address to listen on. If empty, bind to all interfaces -->
+			<localIPAddress></localIPAddress>
+		</udpCollector>
+		<!--## Name of the exporting process. Must match exporting process name -->
+		<!-- exportingProcess>File writer UDP Rotate</exportingProcess -->
+		<!-- exportingProcess>File writer UDP Rotate</exportingProcess -->
+		<exportingProcess>JSON writer UDP</exportingProcess>
+		<!--## File for exporting status information to (combined with -S) -->
+		<statisticsFile>/home/v795363/log/ipfixcol_stat.log</statisticsFile>
+	</collectingProcess>
+
+
+	<exportingProcess>
+	  <name>JSON writer UDP</name>
+          <singleManager>yes</singleManager> 
+	  <destination>
+	      <name>all ODID</name>
+	      <fileWriter>
+	         <fileFormat>json</fileFormat>
+	         <metadata>no</metadata>
+	         <tcpFlags>formated</tcpFlags>
+	         <timestamp>epoc</timestamp>
+	         <protocol>formated</protocol>
+	         <ignoreUnknown>no</ignoreUnknown>
+                 <nonPrintableChar>yes</nonPrintableChar>
+                 <output>
+                   <type>file</type>
+                   <path>/home/v795363/flows/iwan/</path>
+                   <prefix>json51000.</prefix>
+                   <dumpInterval>
+                     <timeWindow>60</timeWindow>
+                     <timeAlignment>yes</timeAlignment>
+                   </dumpInterval>
+                 </output>
+               </fileWriter>
+             </destination>
+        </exportingProcess>	
+
+	<!-- List of active Intermediate Plugins -->
+	<intermediatePlugins>
+		<!-- Dummy Intermediate Plugin - does nothing -->
+		<dummy_ip>
+		</dummy_ip>
+	</intermediatePlugins>
+</ipfix>

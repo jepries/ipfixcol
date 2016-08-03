@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+	<collectingProcess>
+		<name>view</name>
+		<fileReader>
+			<file>file:__REPLACE_WITH_INPUT_FILE__</file>
+		</fileReader>
+		<!-- exportingProcess>File viewer</exportingProcess  -->
+		<exportingProcess>JSON writer UDP</exportingProcess>
+	</collectingProcess>
+	
+	<exportingProcess>
+		<name>File viewer</name>
+		<destination>
+			<name>View IPFIX message</name>
+			<fileWriter>
+				<fileFormat>view</fileFormat>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+<exportingProcess>
+   <name>JSON writer UDP</name>
+          <singleManager>yes</singleManager>
+   <destination>
+       <name>all ODID</name>
+       <fileWriter>
+          <fileFormat>json</fileFormat>
+          <metadata>no</metadata>
+          <tcpFlags>formated</tcpFlags>
+          <timestamp>epoc</timestamp>
+          <protocol>formated</protocol>
+          <ignoreUnknown>no</ignoreUnknown>
+                 <nonPrintableChar>yes</nonPrintableChar>
+                 <!-- output>
+                   <type>print</type>
+                 </output -->
+                 <!--output>
+                   <type>send</type>
+                   <ip>127.0.0.1</ip>
+                   <port>4444</port>
+                   <protocol>udp</protocol>
+                 </output -->
+                 <output>
+                   <type>file</type>
+                   <path>/home/v795363/flows/</path>
+                   <prefix>json.</prefix>
+                   <dumpInterval>
+                     <timeWindow>300</timeWindow>
+                     <timeAlignment>yes</timeAlignment>
+                   </dumpInterval>
+                 </output>
+                 <!-- output>
+                   <type>server</type>
+                   <port>4800</port>
+                   <blocking>no</blocking>
+                 </output -->
+               </fileWriter>
+             </destination>
+        </exportingProcess>
+
+</ipfix>
