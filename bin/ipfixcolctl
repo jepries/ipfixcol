@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# ipfixcol IPFIX collector
+#
+# chkconfig: - 90 60
+# description: IPFIX flow collector
+# processname: ipfixcol
+# pidfile: /var/run/ipfixcol.pid
+  
+prog="./ipfixcol"
+params="-v3 -s -c json_file_tcp.xml -e ipfixcol-ipfix-elements.xml -i ipfixcol-internalcfg.xml"
+
+start() {
+	# Check whether ipfixcol is running
+	if status; then
+		echo "$prog is already running"
+		return 1
+	fi
+
+	# Start ipfixcol
+	echo "Starting $prog..."
+	$prog $params -d > /dev/null
+	retval=$?
+
+	return $retval
+}
+
+stop() {
+	if ! status; then
+		echo "$prog is NOT running"
+		return 1
+	fi
+
+	echo "Stopping $prog..."
+
+	# Stop ipfixcol; identify all involved PIDs and kill each of them
+	pids=( $(pgrep -f ${prog}) )
+        echo "prog = ${prog}"
+        echo "pids = ${pids}"
+	for pid in "${pids[@]}"; do
+          echo "checking ${pid}"
+		if [[ $pid != $$ ]]; then
+                        echo "killing ${pid}"
+			kill "$pid"
+		fi
+	done
+        echo "done killing pids"
+	retval=$?
+
+	return $retval
+}
+
+# Prints output when first argument is '1'
+status() {
+	ps -eo command | grep "^$prog $params" > /dev/null
+	retval=$?
+	if [ "$#" -eq 1 ] && [ "$1" -eq 1 ]; then
+		if [ "$retval" -eq 0 ]; then
+			echo "$prog is running"
+		else
+			echo "$prog is NOT running"
+		fi
+	fi
+
+	return $retval
+}
+
+restart() {
+	stop
+	start
+}	
+
+case "$1" in
+	start)
+		start
+	;;
+	stop)
+		stop
+	;;
+	restart)
+		restart
+	;;
+	reload)
+		restart
+	;;
+	status)
+		status 1
+	;;
+	*)
+		echo "Usage: $0 {start|stop|status|restart}"
+		exit 1
+esac
+
+exit $?

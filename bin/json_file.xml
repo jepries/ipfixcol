@@ -10,7 +10,7 @@
                         <!--## Arbitrary udp collector name -->
                         <name>Listening port 4739</name>
                         <!--## Local listening port -->
-                        <localPort>4739</localPort>
+                        <localPort>44442</localPort>
                         <!--## Template lifetime in seconds -->
                         <templateLifeTime>1800</templateLifeTime>
                         <!--## Options template lifetime in seconds -->
