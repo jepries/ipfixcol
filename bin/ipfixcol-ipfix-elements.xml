@@ -509,8 +509,22 @@
 		<id>88</id>
 		<name>fragmentOffset</name>
 		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>89</id>
+		<name>forwardingStatus</name>
+		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
+        <element>
+                <enterprise>0</enterprise>
+                <id>94</id>
+                <name>APPLICATION_DESCRIPTION</name>
+                <dataType>string</dataType>
+                <semantic></semantic>
+        </element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>95</id>

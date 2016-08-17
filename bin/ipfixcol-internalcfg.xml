@@ -15,23 +15,23 @@
 		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
 		<!--## Path of the plugin module -->
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-udp-input.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-udp-input.so</file>
 		<!--## Process name suffix (ipfixcol:UDP) -->
 		<processName>UDP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-tcp-input.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-tcp-input.so</file>
 		<processName>TCP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-ipfix-input.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-ipfix-input.so</file>
 		<processName>file</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>sctpCollector</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-sctp-input.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-sctp-input.so</file>
 		<processName>SCTP</processName>
 	</inputPlugin>
 	<!--## Storage plugins -->
@@ -41,7 +41,7 @@
 			##   match this element -->
 		<fileFormat>ipfix</fileFormat>
 		<!--## Path of the storage module  -->
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-ipfix-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-ipfix-output.so</file>
 		<!--## Thread name suffix (storage:ipfix) -->
 		<threadName>ipfix</threadName>
 	</storagePlugin>
@@ -51,64 +51,64 @@
 			##   match this element -->
 		<fileFormat>ripfix</fileFormat>
 		<!--## Path of the storage module  -->
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-ipfix-rotate-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-ipfix-rotate-output.so</file>
 		<!--## Thread name suffix (storage:ipfix) -->
 		<threadName>ripfix</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>dummy</fileFormat>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-dummy-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-dummy-output.so</file>
 		<threadName>dummy</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>view</fileFormat>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-ipfixviewer-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-ipfixviewer-output.so</file>
 		<threadName>view</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-fastbit-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-fastbit-output.so</file>
 		<threadName>fastbit</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>forwarding</fileFormat>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-forwarding-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-forwarding-output.so</file>
 		<threadName>forwarding</threadName>
 	</storagePlugin>
 	<!-- Intermediate plugins -->
 	<intermediatePlugin>
 		<name>dummy_ip</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-dummy-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-dummy-inter.so</file>
 		<threadName>dummy_inter</threadName>
 	</intermediatePlugin>
 	<intermediatePlugin>
 		<name>anonymization_ip</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-anonymization-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-anonymization-inter.so</file>
 		<threadName>anon_inter</threadName>
 	</intermediatePlugin>
 	<intermediatePlugin>
 		<name>joinflows_ip</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-joinflows-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-joinflows-inter.so</file>
 		<threadName>join_inter</threadName>
 	</intermediatePlugin>
 	<intermediatePlugin>
 		<name>filter</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-filter-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-filter-inter.so</file>
 		<threadName>filter_inter</threadName>
 	</intermediatePlugin>
 	<intermediatePlugin>
 		<name>odip</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-odip-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-odip-inter.so</file>
 		<threadName>odip_inter</threadName>
 	</intermediatePlugin>
 	<intermediatePlugin>
 		<name>hooks</name>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-hooks-inter.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-hooks-inter.so</file>
 		<threadName>hooks_inter</threadName>
 	</intermediatePlugin>
 	<storagePlugin>
 		<fileFormat>json</fileFormat>
-		<file>/home/v795363/github/ipfixcol/bin/ipfixcol-json-output.so</file>
+		<file>/home/v795363/ipfixcol_latest/bin/ipfixcol-json-output.so</file>
 		<threadName>json</threadName>
 	</storagePlugin>
 </ipfixcol>

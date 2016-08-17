@@ -6,9 +6,10 @@
 # description: IPFIX flow collector
 # processname: ipfixcol
 # pidfile: /var/run/ipfixcol.pid
-  
+
+export LD_LIBRARY_PATH=.  
 prog="./ipfixcol"
-params="-v3 -s -c json_file_tcp.xml -e ipfixcol-ipfix-elements.xml -i ipfixcol-internalcfg.xml"
+params="-v3 -s -c json_file_udp.xml -e ipfixcol-ipfix-elements.xml -i ipfixcol-internalcfg.xml"
 
 start() {
 	# Check whether ipfixcol is running

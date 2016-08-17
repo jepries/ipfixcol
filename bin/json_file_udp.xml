@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+        <!--## Every collecting process will be started as new process -->
+        <collectingProcess>
+                <!--## Arbitrary collecting process name  -->
+                <name>UDP collector</name>
+                <!--## Type of the collector. Supported types are defined in internalcfg.xml -->
+                <udpCollector>
+                        <!--## Arbitrary udp collector name -->
+                        <name>Listening port 4739</name>
+                        <!--## Local listening port -->
+                        <localPort>4739</localPort>
+                        <!--## Template lifetime in seconds -->
+                        <templateLifeTime>1800</templateLifeTime>
+                        <!--## Options template lifetime in seconds -->
+                        <optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+                        <!--## Template lifetime in packets (for how many packets is template valid) -->
+                        <!-- <templateLifePacket>5</templateLifePacket>  -->
+                        <!--## Options template lifetime in packets -->
+                        <!-- <optionsTemplateLifePacket>100</optionsTemplateLifePacket>  -->
+                        <!--## Local address to listen on. If empty, bind to all interfaces -->
+                        <localIPAddress></localIPAddress>
+                </udpCollector>
+                <!--## Name of the exporting process. Must match exporting process name -->
+                <!-- exportingProcess>File writer UDP Rotate</exportingProcess -->
+                <!-- exportingProcess>File writer UDP Rotate</exportingProcess -->
+                <exportingProcess>JSON writer UDP</exportingProcess>
+                <!--## File for exporting status information to (combined with -S) -->
+                <statisticsFile>/home/v795363/log/ipfixcol_stat.log</statisticsFile>
+        </collectingProcess>
+
+        <!-- collectingProcess>
+                <name>TCP collector</name>
+                <tcpCollector>
+                        <name>Listening port 4739</name>
+                        <localPort>4739</localPort>
+                        <localIPAddress></localIPAddress>
+                </tcpCollector>
+                <exportingProcess>File writer TCP</exportingProcess>
+        </collectingProcess -->
+
+        <!-- collectingProcess>
+                <name>SCTP collector</name>
+                <sctpCollector>
+                        <name>Listening port 4739</name>
+                        <localPort>4739</localPort>
+                        --><!--## Collector will listen on all addresses specified below --><!--
+                        <localIPAddress>127.0.0.1</localIPAddress>
+                        <localIPAddress>::1</localIPAddress>
+                </sctpCollector>
+                <exportingProcess>File writer SCTP</exportingProcess>
+        </collectingProcess -->
+
+        <!--## Exporting process configuration -->
+        <exportingProcess>
+                <!--## Name of the exporting process, must match <exportingProcess> element
+                           in <collectingProcess> -->
+                <name>File writer UDP</name>
+                <singleManager>yes</singleManager>  
+                <!--## Specification of storage plugin -->
+                <destination>
+                        <name>all ODIDs</name>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://home/v795363/flows/collected-records-udp-all-odid.ipfix</file>
+                        </fileWriter>
+                </destination>
+        </exportingProcess>
+        <exportingProcess>
+                <!--## Name of the exporting process, must match <exportingProcess> element
+                           in <collectingProcess> -->
+                <name>File writer UDP Rotate</name>
+                <singleManager>yes</singleManager>  
+                <!--## Specification of storage plugin -->
+                <destination>
+                        <name>all ODIDs</name>
+                        <fileWriter>
+                                <fileFormat>ripfix</fileFormat>
+                                <file>file://home/v795363/flows/collected.ipfix</file>
+                                <timeWindow>60</timeWindow>
+                                <timeAlignment>yes</timeAlignment>
+                        </fileWriter>
+                </destination>
+        </exportingProcess>
+        
+
+        <exportingProcess>
+          <name>JSON writer UDP</name>
+          <singleManager>yes</singleManager> 
+          <destination>
+              <name>all ODID</name>
+              <fileWriter>
+                 <fileFormat>json</fileFormat>
+                 <metadata>no</metadata>
+                 <tcpFlags>formated</tcpFlags>
+                 <timestamp>epoc</timestamp>
+                 <protocol>formated</protocol>
+                 <ignoreUnknown>no</ignoreUnknown>
+                 <nonPrintableChar>yes</nonPrintableChar>
+                 <!-- output>
+                   <type>print</type>
+                 </output -->
+                 <output>
+                   <type>send</type>
+                   <ip>10.73.198.152</ip>
+                   <port>50011</port>
+                   <protocol>tcp</protocol>
+                 </output>
+                 <output>
+                   <type>file</type>
+                   <path>/home/v795363/flows/ipsla/</path>
+                   <prefix>json.</prefix>
+                   <dumpInterval>
+                     <timeWindow>60</timeWindow>
+                     <timeAlignment>yes</timeAlignment>
+                   </dumpInterval>
+                 </output>
+                 <!-- output>
+                   <type>server</type>
+                   <port>4800</port>
+                   <blocking>no</blocking>
+                 </output -->
+               </fileWriter>
+             </destination>
+        </exportingProcess>     
+        <!-- exportingProcess>
+                <name>File writer TCP</name>
+                <destination>
+                        <name>Write to /tmp folder</name>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://tmp/collected-records-tcp.ipfix</file>
+                        </fileWriter>
+                </destination>
+       -->
+                <!--## Enable single Data manager - only one instance of storage plugin(s)
+                shared between every ODID -->
+                <!-- <singleManager>yes</singleManager>  -->
+        <!-- /exportingProcess -->
+
+        <!-- exportingProcess>
+                <name>File writer SCTP</name>
+                <destination>
+                        <name>Store data using ipfix file format</name>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file://tmp/collected-records-sctp.ipfix</file>
+                        </fileWriter>
+                </destination>
+        </exportingProcess -->
+
+        <!-- List of active Intermediate Plugins -->
+        <intermediatePlugins>
+                <!-- Dummy Intermediate Plugin - does nothing -->
+                <!-- dummy_ip>
+                </dummy_ip -->
+                
+                <odip>
+                </odip>
+                
+                <!-- Configuration for Anonymization Intermediate Plugin -->
+                <!--
+                <anonymization_ip>
+                        <type>cryptopan</type>
+                </anonymization_ip>
+                -->
+                
+                <!-- Configuration for next Anonymization Intermediate Plugin -->
+                <!--
+                <anonymization_ip>
+                        <type>truncation</type>
+                </anonymization_ip>
+                -->
+                
+                <!-- Configuration for joinflows plugin -->
+                <!-- <joinflows_ip>     -->
+                        <!-- Set destination ODID -->
+                        <!-- <join to="2"> -->
+                                <!-- Set source ODIDs for this dst ODID -->
+                                <!-- <from>1</from>     -->
+                                <!-- <from>3</from> -->
+                        <!-- </join> -->
+                        <!-- Set another destination ODID -->
+                        <!-- <join to="4"> -->
+                                <!-- <from>5</from> -->
+                                <!-- All ODIDs not mentioned in any <join> block 
+                                  will be mapped on this dst ODID -->
+                                <!-- <from>*</from> -->
+                        <!-- </join> -->
+                <!-- </joinflows_ip> -->
+        </intermediatePlugins>
+</ipfix>
+

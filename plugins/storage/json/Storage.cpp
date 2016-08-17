@@ -186,7 +186,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 
 	offset = 0;
 	record.clear();
-	STR_APPEND(record, "{\"@type\": \"ipfix.entry\", ");
+	/*  STR_APPEND(record, "{\"@type\": \"ipfix.entry\", "); */
+	STR_APPEND(record, "{\"@type\": \"entry\", ");
 
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
@@ -225,7 +226,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			STR_APPEND(record, ", ");
 		}
 
-		STR_APPEND(record, "\"ipfix.");
+		/*  STR_APPEND(record, "\"ipfix."); */
+		STR_APPEND(record, "\"");
 		record += element_name;
 		STR_APPEND(record, "\": ");
 
@@ -298,7 +300,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 	
 	/* Store metadata */
 	if (processMetadata) {
-		STR_APPEND(record, ", \"ipfix.metadata\": {");
+		/* STR_APPEND(record, ", \"ipfix.metadata\": {"); */
+		STR_APPEND(record, ", \"metadata\": {");
 		storeMetadata(mdata);
 		STR_APPEND(record, "}");
 	}
